@@ -2,6 +2,11 @@
 
 Inserting raw data to Bigquey  , Creating Models for Anayltical Purpose
 
+![oc model image](https://github.com/Vishal0540/ecommerce-data-engineering/blob/main/oc.jpeg)
+
+![ocp model image](https://github.com/Vishal0540/ecommerce-data-engineering/blob/main/ocp.jpeg)
+
+
 
 ## Installation
 
