@@ -1,0 +1,112 @@
+1.Number of orders per Day , Week, Month
+
+[A] per Day
+
+SELECT COUNT(order_id) AS num_orders, DATE(order_purchase_timestamp) AS order_date
+FROM `ecommerce-372314.datamodel.OrdersCustomers`
+GROUP BY order_date
+ORDER BY order_date
+
+[B] per Month
+
+SELECT COUNT(order_id) AS num_orders, EXTRACT(MONTH from order_purchase_timestamp) AS order_month , EXTRACT(YEAR from order_purchase_timestamp) as order_year
+FROM `ecommerce-372314.datamodel.OrdersCustomers`
+GROUP BY order_month ,order_year 
+ORDER BY order_year , order_month 
+
+[C] per Week
+
+SELECT COUNT(order_id) AS num_orders,DATE_ADD(DATE(order_purchase_timestamp) , INTERVAL - (Extract(DAYOFWEEK from order_purchase_timestamp)-1) DAY) as order_week
+FROM `ecommerce-372314.datamodel.OrdersCustomers`
+GROUP BY order_week
+ORDER BY order_week 
+
+(Week start as Sunday)
+
+
+2]Active Customers: Customers with >=1 order within the period per Day, Week, Month
+
+Active Customers refers to those customers who have placed at least one order within a specific time period.
+
+
+[A] per day
+
+SELECT Count(DISTINCT(customer_unique_id)) as Active_Customer  , DATE(order_purchase_timestamp) as ordered_day
+FROM `ecommerce-372314.datamodel.OrdersCustomers` 
+GROUP BY ordered_day
+ORDER BY ordered_day
+
+[B] per Month
+
+SELECT Count(DISTINCT(customer_unique_id)) as Active_Customer  , EXTRACT(MONTH from order_purchase_timestamp) AS order_month , EXTRACT(YEAR from order_purchase_timestamp) as order_year
+FROM `ecommerce-372314.datamodel.OrdersCustomers` 
+GROUP BY order_month ,order_year
+ORDER BY order_year , order_month
+
+
+[c] per week
+
+SELECT Count(DISTINCT(customer_unique_id)) as Active_Customer  , DATE_ADD(DATE(order_purchase_timestamp) , INTERVAL - (Extract(DAYOFWEEK from order_purchase_timestamp)-1) DAY) as order_week
+FROM `ecommerce-372314.datamodel.OrdersCustomers` 
+GROUP BY order_week
+ORDER BY order_week
+
+
+3.] Average Order amount per user within the period
+
+
+
+
+SELECT customer_unique_id , SUM(price)/SUM(order_item_id) as Average_Order_Amount 
+FROM `ecommerce-372314.datamodel.OrderCustomerProduct`
+WHERE order_status!='canceled' AND DATE(order_purchase_timestamp) BETWEEN '2018-07-27' AND '2018-08-13' 
+GROUP BY 	customer_unique_id
+order by customer_unique_id
+
+
+4.] Weekly Customer Retention: Customers that ordered in the week that was already a
+customer before.
+
+SELECT order_week, COUNT(DISTINCT customer_unique_id) as weekly_retention_count
+FROM(
+SELECT customer_unique_id,
+         DATE_ADD(DATE(order_purchase_timestamp), 
+                  INTERVAL -(EXTRACT(DAYOFWEEK FROM order_purchase_timestamp)-1) DAY) AS order_week
+FROM  `ecommerce-372314.datamodel.OrderCustomerProduct`
+order by order_week) as t
+WHERE customer_unique_id IN (SELECT customer_id FROM `ecommerce-372314.datamodel.OrderCustomerProduct` WHERE  DATE_ADD(DATE(order_purchase_timestamp), 
+                  INTERVAL -(EXTRACT(DAYOFWEEK FROM order_purchase_timestamp)-1) DAY)  < t.order_week)
+GROUP BY order_week
+ORDER BY order_week ASC
+
+ 5.]    Category Retention: Orders of an item in a category from users that already
+purchased the same category from the previous order
+
+ SELECT
+  o1.product_category_name,
+  COUNT(DISTINCT o1.customer_unique_id) AS num_customers,
+  COUNT(DISTINCT o2.customer_unique_id) AS num_returning_customers,
+  COUNT(DISTINCT o2.customer_unique_id) / COUNT(DISTINCT o1.customer_unique_id) AS Retention_Rate
+FROM `ecommerce-372314.datamodel.OrderCustomerProduct` o1
+LEFT JOIN `ecommerce-372314.datamodel.OrderCustomerProduct` o2
+  ON o1.customer_unique_id = o2.customer_unique_id
+  AND o1.product_category_name = o2.product_category_name
+  AND o2.order_purchase_timestamp > o1.order_purchase_timestamp
+GROUP BY o1.product_category_name
+
+
+6.] Cross-Category Retention: Percentage of orders in a category that comes from users
+who purchased in a different category on the previous order
+
+
+SELECT
+  o1.product_category_name,
+  COUNT(DISTINCT o1.customer_unique_id) AS num_customers,
+  COUNT(DISTINCT o2.customer_unique_id) AS num_returning_customers,
+  COUNT(DISTINCT o2.customer_unique_id) / COUNT(DISTINCT o1.customer_unique_id) AS Retention_Rate
+FROM `ecommerce-372314.datamodel.OrderCustomerProduct` o1
+LEFT JOIN `ecommerce-372314.datamodel.OrderCustomerProduct` o2
+  ON o1.customer_unique_id = o2.customer_unique_id
+  AND o1.product_category_name != o2.product_category_name
+  AND o2.order_purchase_timestamp > o1.order_purchase_timestamp
+GROUP BY o1.product_category_name
